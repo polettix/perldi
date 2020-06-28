@@ -1,0 +1,83 @@
+---
+# Base Docker images for Perl applications
+
+name: polettix/perldi
+logger: ['Stderr', 'log_level', 'info']
+
+variables:
+   - &base_image 'alpine:3.11'
+   - &author     'Flavio Poletti (flavio@polettix.it)'
+   - &registry   'docker.pkg.github.com'
+
+   - &version_major   0
+   - &version_minor   1
+   - &version_patch   0
+   - &version         ['join', '.', *version_major, *version_minor, *version_patch]
+   - &version_maj_min ['join', '.', *version_major, *version_minor]
+
+   - &builder_image_name  'polettix/perldi/builder'
+   - &builder_image_full  ['join', '/', *registry, *builder_image_name]
+
+   - &bundler_image_name  'polettix/perldi/bundler'
+   - &bundler_image_full  ['join', '/', *registry, *bundler_image_name]
+
+   - unexpanded:
+      tags: &version_tags ['*', 'latest', *version_maj_min, *version]
+
+      build-prerequisites: &build_prereqs_list
+         - build-base
+         - perl
+         - perl-dev
+         - openssl
+         - openssl-dev
+         - zlib
+         - zlib-dev
+         # add other modules for the "build" phase
+
+      bundle-prerequisites: &bundle_prereqs_list
+         - --suexec
+         - --profilexec
+         - perl
+
+   - &username  'urist'
+   - &groupname 'urist'
+   - &homedir   '/app'
+
+
+packs:
+   basic:
+      type:   git
+      origin: https://github.com/polettix/dibspack-basic.git
+
+actions:
+   default:
+      - build-base
+      - bundle-base
+
+   build-base:
+      - from: *base_image
+      - extends: ensure-prereqs
+        args: *build_prereqs_list
+      - name: 'save builder image'
+        image_name: *builder_image_full
+        tags: *version_tags
+
+   bundle-base:
+      - from: *base_image
+      - extends: ensure-prereqs
+        args: *bundle_prereqs_list
+      - name: 'save bundler image'
+        image_name: *bundler_image_full
+        tags: *version_tags
+
+   ensure-prereqs:
+      name: install OS-level prerequisites
+      pack: basic
+      user: root
+      path: package/apk
+      commit:
+         author: *author
+         entrypoint: [ ]
+         cmd: [ '/bin/sh', '-l' ]
+         user: root
+         workdir: /root

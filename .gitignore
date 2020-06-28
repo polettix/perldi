@@ -1,0 +1,8 @@
+*.swp
+/tmp/
+/dibs/
+/auto/
+/cache/
+/env/
+/pack/
+/src/
